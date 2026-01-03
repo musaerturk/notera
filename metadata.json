@@ -1,0 +1,7 @@
+{
+  "name": "notera - değerlendirmenin akıllı yolu",
+  "description": "Öğretmenler için el yazısı sınav kağıtlarını yapay zeka ile okuyan, puanlayan ve geri bildirim veren akıllı değerlendirme asistanı.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
