@@ -18,6 +18,7 @@ import PricingView from './components/PricingView';
 import CheckoutView from './components/CheckoutView';
 import ExamoraInfoView from './components/ExamoraInfoView';
 import EduMetrikInfoView from './components/EduMetrikInfoView';
+import PrivacyModal from './components/PrivacyModal';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'home' | 'setup' | 'upload' | 'dashboard' | 'detail' | 'analytics' | 'question-prep' | 'settings' | 'exam-paper' | 'info' | 'admin' | 'admin-login' | 'pricing' | 'checkout' | 'examora-info' | 'edumetrik-info'>('info');
@@ -26,6 +27,7 @@ const App: React.FC = () => {
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [prefilledQuestions, setPrefilledQuestions] = useState<Question[]>([]);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [settings, setSettings] = useState<UserSettings>({
     teacherName: '',
     schoolName: '',
@@ -43,7 +45,9 @@ const App: React.FC = () => {
     const savedExam = localStorage.getItem('notera_exam');
     const savedSubmissions = localStorage.getItem('notera_submissions');
     const savedSettings = localStorage.getItem('notera_settings');
+    const privacyAccepted = localStorage.getItem('notera_privacy_accepted');
 
+    if (!privacyAccepted) setShowPrivacy(true);
     if (savedExam) setExam(JSON.parse(savedExam));
     if (savedSubmissions) setSubmissions(JSON.parse(savedSubmissions));
     if (savedSettings) {
@@ -63,6 +67,11 @@ const App: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const handlePrivacyAccept = () => {
+    localStorage.setItem('notera_privacy_accepted', 'true');
+    setShowPrivacy(false);
+  };
 
   const applyTheme = (theme: 'dark' | 'light' | 'system') => {
     const root = window.document.documentElement;
@@ -187,6 +196,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${settings.theme === 'dark' ? 'bg-notera-dark text-slate-100' : 'bg-notera-gray text-slate-900'}`}>
+      {showPrivacy && <PrivacyModal onAccept={handlePrivacyAccept} />}
       <Header currentView={currentView} onNavigate={(view) => setCurrentView(view)} isExamSet={!!exam} isPremium={settings.isPremium} />
       <main className="flex-grow container mx-auto px-4 py-8 max-w-5xl">
         {renderView()}

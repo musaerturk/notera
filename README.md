@@ -1,59 +1,46 @@
 
-# NOTERA - AI-Powered Teacher Assistant 🎓✨
+# 🎓 NOTERA | AI-Powered Teacher's Assistant
+[![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-**NOTERA**, öğretmenlerin yazılı sınav süreçlerini baştan sona dijitalleştiren ve yapay zeka ile destekleyen profesyonel bir platformdur. 
+**NOTERA**, modern öğretmenlerin iş yükünü azaltmak, ölçme ve değerlendirme süreçlerini objektif verilerle güçlendirmek için geliştirilmiş hepsi bir arada bir eğitim asistanıdır.
 
-> "Son karar her zaman öğretmenindir." prensibiyle çalışan NOTERA, bir ölçme-değerlendirme asistanıdır.
+## 🚀 Temel Modüller
 
-![NOTERA Banner](https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80)
+### ✏️ Examora (Sınav Yönetimi)
+*   **Akıllı Soru Üretimi:** Kazanım ve zorluk seviyesine göre Gemini 3 Pro ile profesyonel açık uçlu sorular hazırlar.
+*   **Hibrit Okuma:** El yazısı kağıtları kamera veya PDF üzerinden tarar, anlamsal analiz yaparak puanlar.
+*   **Resmi Çıktı:** MEB standartlarına uygun, yazdırılabilir sınav kağıtları (PDF) üretir.
 
-## 🌟 Öne Çıkan Özellikler
+### 📉 EduMetrik (Analitik)
+*   **Kazanım Analizi:** Hangi kazanımın sınıfta ne oranda öğrenildiğini görselleştirir.
+*   **Bireysel Gelişim:** Her öğrenciye özel AI destekli gelişim raporları hazırlar.
+*   **Yönetici Paneli:** Okul geneli başarı istatistiklerini takip eder.
 
-### ✏️ EXAMORA (Akıllı Sınav Modülü)
-- **AI Soru Hazırlama:** Kazanımlara uygun, zorluk seviyesi ayarlı açık uçlu sorular üretin.
-- **Manuel Tanımlama:** Elinizdeki mevcut sınavları puanlama anahtarı (rubrik) ile sisteme tanıtın.
-- **Resmi Çıktı:** MEB standartlarında, hazır A4 sınav kağıdı PDF'i oluşturun.
+## 🛠️ Kurulum ve Çalıştırma
 
-### 📸 Akıllı Okuma & Değerlendirme
-- **El Yazısı OCR:** Öğrenci kağıtlarını fotoğraflayarak veya PDF olarak yükleyin.
-- **Anlam Bazlı Puanlama:** AI, öğrencinin yanıtını kelime kelime değil, rubrikteki anlamsal karşılığına göre puanlar.
-- **Gerekçeli Geri Bildirim:** AI her puana bir gerekçe yazar ve öğrenciye özel gelişim notu üretir.
+Projenizi yerelde çalıştırmak için:
 
-### 📊 EDUMETRİK (Analiz & Raporlama)
-- **Sınıf Karnesi:** Başarı ortalaması, güçlü ve zayıf kazanımların analizi.
-- **Bireysel Rapor:** Her öğrenci için PDF formatında detaylı sonuç karnesi.
-- **Veri Görselleştirme:** Etkileşimli grafiklerle sınıfın genel durumunu izleme.
+1.  **Bağımlılıkları Yükleyin:**
+    ```bash
+    npm install
+    ```
+2.  **Geliştirme Sunucusunu Başlatın:**
+    ```bash
+    npm start
+    ```
+3.  **Build (Canlıya Alma):**
+    ```bash
+    npm run build
+    ```
 
-## 🛠️ Teknolojiler
-
-- **Frontend:** React 19, TypeScript, Tailwind CSS
-- **AI:** Google Gemini 3 (Pro & Flash) API
-- **Analiz:** Recharts
-- **Yazdırma:** Browser-native Print-to-PDF Engine
-
-## 🚀 Kurulum
-
-1. Bu depoyu klonlayın:
-   ```bash
-   git clone https://github.com/kullanici-adiniz/notera.git
-   cd notera
-   ```
-
-2. Bağımlılıkları yükleyin:
-   ```bash
-   npm install
-   ```
-
-3. Gemini API anahtarınızı tanımlayın:
-   Projeyi yerelde çalıştırmak için Gemini API anahtarınızın ortam değişkenlerinde (`process.env.API_KEY`) tanımlı olması gerekir.
-
-4. Uygulamayı başlatın:
-   ```bash
-   npm start
-   ```
+## 🔐 Güvenlik ve Gizlilik (KVKK)
+NOTERA, öğrenci verilerinin gizliliğini ön planda tutar. Görüntü işleme süreçleri anonimleştirilmiştir ve analiz sonrası veriler sistemden temizlenir.
 
 ## 📄 Lisans
-Bu proje [MIT](LICENSE) lisansı ile korunmaktadır.
+Bu proje **MIT Lisansı** ile korunmaktadır.
 
 ---
-*NOTERA, eğitimde fırsat eşitliğini ve öğretmen verimliliğini desteklemek amacıyla geliştirilmiştir.*
+*Geliştirici Notu: "Son karar her zaman öğretmenindir."*
