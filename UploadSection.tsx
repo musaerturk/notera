@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Exam, StudentSubmission, UserSettings } from './types';
 import { gradeSubmission } from './services/geminiService';
@@ -48,7 +47,7 @@ const UploadSection: React.FC<UploadSectionProps> = ({ exam, onUpload, settings 
     const newSubmissions: StudentSubmission[] = [];
 
     for (let i = 0; i < fileDatas.length; i++) {
-      // Corrected progress calculation
+      // İlerleme yüzdesi düzeltildi
       setUploadProgress(Math.round(((i + 1) / fileDatas.length) * 100));
       const { data, name } = fileDatas[i];
       

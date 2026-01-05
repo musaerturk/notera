@@ -1,15 +1,5 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Exam, GradingResult, StudentSubmission, Question, FeedbackTone } from "../types";
-
-// Yardımcı fonksiyon: API instance oluşturur
-const getAI = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("API Anahtarı bulunamadı. Lütfen Netlify ayarlarını kontrol edin.");
-  }
-  return new GoogleGenAI({ apiKey });
-};
 
 export const generateQuestions = async (
   grade: string,
@@ -18,7 +8,7 @@ export const generateQuestions = async (
   difficulty: string,
   count: number = 3
 ): Promise<Question[]> => {
-  const ai = getAI();
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = 'gemini-3-flash-preview';
   
   const systemInstruction = `
@@ -31,7 +21,7 @@ export const generateQuestions = async (
   const prompt = `
     DERS: ${course}
     SINIF DÜZEYİ: ${grade}
-    ZORLUK SEVİYESİ: ${difficulty}
+    ZORLUK SEVİSESİ: ${difficulty}
     KAZANIM / ÖĞRENME ÇIKTISI: "${outcome}"
     İSTENEN SORU SAYISI: ${count}
   `;
@@ -89,7 +79,7 @@ export const gradeSubmission = async (
   submission: StudentSubmission,
   tone: FeedbackTone = 'encouraging'
 ): Promise<{ results: GradingResult[]; totalScore: number }> => {
-  const ai = getAI();
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = 'gemini-3-flash-preview';
   
   const toneInstruction = {
