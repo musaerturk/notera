@@ -2,6 +2,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Exam, GradingResult, StudentSubmission, Question, FeedbackTone } from "../types";
 
+// Yardımcı fonksiyon: API instance oluşturur
+const getAI = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API Anahtarı bulunamadı. Lütfen Netlify ayarlarını kontrol edin.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
 export const generateQuestions = async (
   grade: string,
   course: string,
@@ -9,7 +18,7 @@ export const generateQuestions = async (
   difficulty: string,
   count: number = 3
 ): Promise<Question[]> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = getAI();
   const model = 'gemini-3-flash-preview';
   
   const systemInstruction = `
@@ -61,18 +70,17 @@ export const generateQuestions = async (
       }
     });
 
-    if (!response.text) {
-      throw new Error("Yapay zeka yanıt üretemedi.");
-    }
+    const text = response.text;
+    if (!text) throw new Error("AI boş yanıt döndürdü.");
 
-    const questions: any[] = JSON.parse(response.text);
+    const questions: any[] = JSON.parse(text);
     return questions.map((q, i) => ({
       ...q,
       id: `gen-${Date.now()}-${i}`
     }));
   } catch (error: any) {
-    console.error("Gemini Generation Error:", error);
-    throw new Error(error.message || "AI servisi şu an yanıt veremiyor.");
+    console.error("Gemini Hatası:", error);
+    throw new Error(error.message || "Sorular oluşturulurken bir hata meydana geldi.");
   }
 };
 
@@ -81,7 +89,7 @@ export const gradeSubmission = async (
   submission: StudentSubmission,
   tone: FeedbackTone = 'encouraging'
 ): Promise<{ results: GradingResult[]; totalScore: number }> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = getAI();
   const model = 'gemini-3-flash-preview';
   
   const toneInstruction = {
@@ -105,17 +113,14 @@ export const gradeSubmission = async (
 
   const prompt = `
     SINAV: ${exam.courseName} (${exam.examName})
-    SORULAR VE PUANLAMA ANAHTARI:
+    SORULAR:
     ${exam.questions.map(q => `
       - ID: ${q.id}
       - SORU: ${q.text}
       - BEKLENEN CEVAP: ${q.expectedAnswer}
-      - RUBRİK: ${q.gradingSteps?.map(s => `${s.text} (${s.score} Puan)`).join(' | ')}
     `).join('\n')}
 
     ÖĞRENCİ: ${submission.studentName}
-    Yanıt Şeması (JSON Array):
-    [{ "questionId": "string", "extractedText": "string", "score": number, "reason": "Neden bu puanı verdin?", "feedback": "Öğrenciye özel mesaj", "confidence": 0.95 }]
   `;
 
   try {
@@ -133,16 +138,15 @@ export const gradeSubmission = async (
       },
     });
 
-    if (!response.text) {
-      throw new Error("Okuma işlemi başarısız oldu.");
-    }
+    const text = response.text;
+    if (!text) throw new Error("Okuma başarısız.");
 
-    const results: GradingResult[] = JSON.parse(response.text);
+    const results: GradingResult[] = JSON.parse(text);
     const totalScore = results.reduce((acc, curr) => acc + curr.score, 0);
 
     return { results, totalScore };
   } catch (error: any) {
-    console.error("Gemini Grading Error:", error);
-    throw new Error(error.message || "Kağıt analiz edilemedi.");
+    console.error("Grade Hatası:", error);
+    throw new Error("Kağıt analiz edilemedi.");
   }
 };

@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: {
+    // Netlify'daki ortam değişkenini tarayıcı tarafına güvenli bir şekilde aktarır
     'process.env.API_KEY': JSON.stringify(process.env.API_KEY)
   },
   server: {
