@@ -1,8 +1,9 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Exam, GradingResult, StudentSubmission, Question } from "../types";
+import { Exam, GradingResult, StudentSubmission, Question, FeedbackTone } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+// Always initialize inside the function or right before use to ensure latest API KEY
+const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const generateQuestions = async (
   grade: string,
@@ -11,25 +12,14 @@ export const generateQuestions = async (
   difficulty: string,
   count: number = 3
 ): Promise<Question[]> => {
+  const ai = getAI();
   const model = 'gemini-3-pro-preview';
   
   const systemInstruction = `
-    Sen uzman bir eğitim teknolojileri uzmanı ve ölçme değerlendirme profesörüsün. 
-    Verilen sınıf, ders, kazanım ve ZORLUK SEVİYESİNE uygun olarak profesyonel açık uçlu sınav soruları hazırlarsın.
-    
-    ZORLUK SEVİYESİ REHBERİ:
-    - Çok Basit: Hatırlama düzeyinde, doğrudan bilgi sorgulayan sorular.
-    - Basit: Kavrama düzeyinde, tanım ve temel örnekleme içeren sorular.
-    - Orta: Uygulama düzeyinde, bilgiyi yeni bir durumda kullanma soruları.
-    - Orta Üst: Analiz düzeyinde, parçalar arası ilişki kurma soruları.
-    - Olması Gereken: Kazanımın gerektirdiği tüm bilişsel basamakları kapsayan ideal sınav sorusu.
-
-    KURALLAR:
-    1. Her soru için ideal bir cevap (expectedAnswer) oluştur.
-    2. Soruda mutlaka olması gereken anahtar kelimeleri (keywords) belirle.
-    3. Her soru için basamaklı bir puanlama rubriği (gradingSteps) hazırla.
-    4. Sorular pedagojik açıdan net ve anlaşılır olmalıdır.
-    5. JSON formatında bir liste döndür.
+    Sen dünya standartlarında bir eğitim teknolojileri uzmanı ve ölçme değerlendirme profesörüsün. 
+    Verilen sınıf düzeyi, ders adı, öğrenme çıktısı (kazanım) ve zorluk seviyesine tam uyumlu, 
+    öğrencinin bilgisini derinlemesine ölçen profesyonel açık uçlu sınav soruları hazırlarsın.
+    Sorular MEB müfredatına ve hiyerarşisine uygun olmalıdır.
   `;
 
   const prompt = `
@@ -38,8 +28,6 @@ export const generateQuestions = async (
     ZORLUK SEVİYESİ: ${difficulty}
     KAZANIM / ÖĞRENME ÇIKTISI: "${outcome}"
     İSTENEN SORU SAYISI: ${count}
-
-    Lütfen bu bilgiler ışığında, tam olarak "${difficulty}" zorluk seviyesinde profesyonel sınav soruları hazırla.
   `;
 
   try {
@@ -89,46 +77,44 @@ export const generateQuestions = async (
 
 export const gradeSubmission = async (
   exam: Exam,
-  submission: StudentSubmission
+  submission: StudentSubmission,
+  tone: FeedbackTone = 'encouraging'
 ): Promise<{ results: GradingResult[]; totalScore: number }> => {
+  const ai = getAI();
   const model = 'gemini-3-flash-preview';
-  const isMultipleChoice = exam.type === 'multiple-choice';
   
+  const toneInstruction = {
+    encouraging: "Öğrenciyi motive eden, gelişim odaklı, yapıcı ve nazik bir dil kullan.",
+    academic: "Resmi, teknik terimlere odaklanan, profesyonel ve akademik standartlarda bir dil kullan.",
+    concise: "Sadece hatayı belirten, çok kısa, öz ve net geri bildirim ver."
+  }[tone];
+
   const systemInstruction = `
-    Sen uzman bir kıdemli öğretmensin. Görevin, sınav kağıdını titizlikle analiz etmektir.
+    Sen uzman bir kıdemli öğretmensin. Görevin, el yazısı sınav kağıdını titizlikle analiz etmektir.
+    GERİ BİLDİRİM TONU: ${toneInstruction}
     
-    ${isMultipleChoice ? `
-    TEST ANALİZ KURALLARI:
-    1. Seçeneği tespit et.
-    2. Doğruysa tam puan, değilse 0 ver.
-    ` : `
-    YAZILI ANALİZ KURALLARI:
-    1. OCR: El yazısını metne dök.
-    2. RUBRİK ÖNCELİĞİ: Öğretmenin tanımladığı "PUANLAMA BASAMAKLARI" (gradingSteps) senin ana kılavuzundur. Öğrencinin yanıtı bu basamaklardan hangisine en yakınsa o basamağın puanını ver.
-    3. GEREKÇE: Neden o basamağı seçtiğini 'reason' alanında açıkla.
-    4. GERİ BİLDİRİM: Öğrenciye gelişim önerisi ver.
-    `}
+    ANALİZ KURALLARI:
+    1. OCR: Görüntüdeki el yazısını hata payını minimize ederek dijital metne dök.
+    2. ANLAM ANALİZİ: Öğrencinin yanıtını kelime kelime değil, rubrikteki anlamsal karşılığına göre değerlendir.
+    3. RUBRİK ÖNCELİĞİ: Öğretmenin tanımladığı "gradingSteps" (puanlama anahtarı) senin ana kılavuzundur.
+    4. GÜVEN SKORU: El yazısı okuma kalitene göre 0.0 ile 1.0 arasında bir confidence (güven) değeri ver.
     
-    Kesinlikle JSON formatında yanıt ver.
+    Yanıtı mutlaka JSON formatında döndür.
   `;
 
   const prompt = `
-    SINAV: ${exam.courseName} - ${exam.examName}
-
-    SORULAR VE RUBRİK:
+    SINAV: ${exam.courseName} (${exam.examName})
+    SORULAR VE PUANLAMA ANAHTARI:
     ${exam.questions.map(q => `
       - ID: ${q.id}
       - SORU: ${q.text}
-      - İDEAL CEVAP: ${q.expectedAnswer}
-      ${!isMultipleChoice ? `- RUBRİK BASAMAKLARI: ${q.gradingSteps?.map(s => `${s.text} -> ${s.score} Puan`).join(' | ')}` : ''}
-      - MAX PUAN: ${q.maxScore}
+      - BEKLENEN CEVAP: ${q.expectedAnswer}
+      - RUBRİK: ${q.gradingSteps?.map(s => `${s.text} (${s.score} Puan)`).join(' | ')}
     `).join('\n')}
 
     ÖĞRENCİ: ${submission.studentName}
-    (Görüntü ektedir.)
-
-    Yanıt Şeması:
-    [{ "questionId": "string", "extractedText": "string", "score": number, "reason": "Öğretmenin rubriğine göre gerekçe", "feedback": "Öğrenci notu", "confidence": number }]
+    Yanıt Şeması (JSON Array):
+    [{ "questionId": "string", "extractedText": "string", "score": number, "reason": "Neden bu puanı verdin?", "feedback": "Öğrenciye özel mesaj", "confidence": 0.95 }]
   `;
 
   try {
@@ -137,12 +123,7 @@ export const gradeSubmission = async (
       contents: {
         parts: [
           { text: prompt },
-          {
-            inlineData: {
-              mimeType: 'image/jpeg',
-              data: submission.base64Data,
-            },
-          },
+          { inlineData: { mimeType: 'image/jpeg', data: submission.base64Data } },
         ],
       },
       config: {
@@ -157,6 +138,7 @@ export const gradeSubmission = async (
     return { results, totalScore };
   } catch (error) {
     console.error("Gemini Grading Error:", error);
+    // Hata durumunda 429 veya başka bir hata koduna karşı retry stratejisi uygulama arayüzünde yönetilmeli.
     throw error;
   }
 };

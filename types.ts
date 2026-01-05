@@ -44,10 +44,60 @@ export interface StudentSubmission {
   totalScore: number;
 }
 
+export type FeedbackTone = 'encouraging' | 'academic' | 'concise';
+
+export type AnalyticsLevel = 'basic' | 'advanced' | 'institutional';
+
 export interface UserSettings {
   teacherName: string;
   schoolName: string;
   subject: string;
   theme: 'dark' | 'light' | 'system';
   aiSensitivity: 'low' | 'normal' | 'strict';
+  feedbackTone: FeedbackTone;
+  isPremium?: boolean;
+  analyticsLevel: AnalyticsLevel;
+}
+
+// ADMIN & PAYMENT TYPES
+export interface PricingPlan {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+  paperLimit: number;
+  questionGenLimit: number;
+  analyticsLevel: AnalyticsLevel;
+  features: string[];
+  isPopular?: boolean;
+  color: string;
+}
+
+export interface Campaign {
+  id: string;
+  code: string;
+  discount: number;
+  expiryDate: string;
+  isActive: boolean;
+  usageCount: number;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  school: string;
+  planId: string;
+  joinedAt: string;
+  status: 'active' | 'suspended' | 'pending';
+  totalPapersRead: number;
+}
+
+export interface AdminStats {
+  totalRevenue: number;
+  activeUsers: number;
+  processedPapers: number;
+  conversions: number;
+  growthData: { date: string; users: number; revenue: number; papers: number }[];
+  moduleUsage: { module: string; usage: number; color: string }[];
 }

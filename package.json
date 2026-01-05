@@ -3,10 +3,11 @@
   "name": "notera-ai-teacher-assistant",
   "version": "1.0.0",
   "description": "Öğretmenler için AI destekli yazılı sınav okuma ve analiz platformu",
-  "main": "index.tsx",
+  "type": "module",
   "scripts": {
+    "dev": "vite",
     "start": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
