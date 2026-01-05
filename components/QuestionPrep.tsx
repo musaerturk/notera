@@ -31,8 +31,8 @@ const QuestionPrep: React.FC<QuestionPrepProps> = ({ onQuestionsGenerated }) => 
     try {
       const questions = await generateQuestions(grade, course, outcome, difficulty);
       setGeneratedQuestions(questions);
-    } catch (err) {
-      alert("Küçük bir sorun oluştu. İstersen tekrar deneyelim.");
+    } catch (err: any) {
+      alert(`Bir sorun oluştu: ${err.message || "Lütfen internet bağlantınızı ve API anahtarınızı kontrol edin."}`);
     } finally {
       setIsGenerating(false);
     }

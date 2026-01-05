@@ -2,9 +2,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Exam, GradingResult, StudentSubmission, Question, FeedbackTone } from "../types";
 
-// Always initialize inside the function or right before use to ensure latest API KEY
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const generateQuestions = async (
   grade: string,
   course: string,
@@ -12,8 +9,8 @@ export const generateQuestions = async (
   difficulty: string,
   count: number = 3
 ): Promise<Question[]> => {
-  const ai = getAI();
-  const model = 'gemini-3-pro-preview';
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const model = 'gemini-3-flash-preview';
   
   const systemInstruction = `
     Sen dünya standartlarında bir eğitim teknolojileri uzmanı ve ölçme değerlendirme profesörüsün. 
@@ -64,14 +61,18 @@ export const generateQuestions = async (
       }
     });
 
-    const questions: any[] = JSON.parse(response.text || "[]");
+    if (!response.text) {
+      throw new Error("Yapay zeka yanıt üretemedi.");
+    }
+
+    const questions: any[] = JSON.parse(response.text);
     return questions.map((q, i) => ({
       ...q,
       id: `gen-${Date.now()}-${i}`
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Generation Error:", error);
-    throw error;
+    throw new Error(error.message || "AI servisi şu an yanıt veremiyor.");
   }
 };
 
@@ -80,7 +81,7 @@ export const gradeSubmission = async (
   submission: StudentSubmission,
   tone: FeedbackTone = 'encouraging'
 ): Promise<{ results: GradingResult[]; totalScore: number }> => {
-  const ai = getAI();
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = 'gemini-3-flash-preview';
   
   const toneInstruction = {
@@ -90,7 +91,7 @@ export const gradeSubmission = async (
   }[tone];
 
   const systemInstruction = `
-    Sen uzman bir kıdemli öğretmensin. Görevin, el yazısı sınav kağıdını titizlikle analiz etmektir.
+    Sen uzman bir kıdemli öğretmensin. Görevin, el yazısı sınav kağıtını titizlikle analiz etmektir.
     GERİ BİLDİRİM TONU: ${toneInstruction}
     
     ANALİZ KURALLARI:
@@ -132,13 +133,16 @@ export const gradeSubmission = async (
       },
     });
 
-    const results: GradingResult[] = JSON.parse(response.text || "[]");
+    if (!response.text) {
+      throw new Error("Okuma işlemi başarısız oldu.");
+    }
+
+    const results: GradingResult[] = JSON.parse(response.text);
     const totalScore = results.reduce((acc, curr) => acc + curr.score, 0);
 
     return { results, totalScore };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Grading Error:", error);
-    // Hata durumunda 429 veya başka bir hata koduna karşı retry stratejisi uygulama arayüzünde yönetilmeli.
-    throw error;
+    throw new Error(error.message || "Kağıt analiz edilemedi.");
   }
 };
