@@ -1,6 +1,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Exam, GradingResult, StudentSubmission, Question, FeedbackTone } from "../types";
 
+const getApiKey = () => {
+  // Vite define ile enjekte edilen anahtarı kontrol et
+  const key = process.env.API_KEY;
+  if (!key || key === "undefined" || key === "" || key.length < 10) {
+    console.error("Gemini API Key eksik veya geçersiz!");
+    return null;
+  }
+  return key;
+};
+
 export const generateQuestions = async (
   grade: string,
   course: string,
@@ -8,9 +18,9 @@ export const generateQuestions = async (
   difficulty: string,
   count: number = 3
 ): Promise<Question[]> => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("API_KEY bulunamadı. Lütfen Netlify ortam değişkenlerini (Environment Variables) kontrol edin.");
+    throw new Error("Lütfen Netlify ayarlarından API_KEY değişkenini tanımlayın ve tekrar Deploy edin.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -20,21 +30,12 @@ export const generateQuestions = async (
     Sen dünya standartlarında bir eğitim teknolojileri uzmanı ve ölçme değerlendirme profesörüsün. 
     Verilen sınıf düzeyi, ders adı, öğrenme çıktısı (kazanım) ve zorluk seviyesine tam uyumlu, 
     öğrencinin bilgisini derinlemesine ölçen profesyonel açık uçlu sınav soruları hazırlarsın.
-    Sorular MEB müfredatına ve hiyerarşisine uygun olmalıdır.
-  `;
-
-  const prompt = `
-    DERS: ${course}
-    SINIF DÜZEYİ: ${grade}
-    ZORLUK SEVİSESİ: ${difficulty}
-    KAZANIM / ÖĞRENME ÇIKTISI: "${outcome}"
-    İSTENEN SORU SAYISI: ${count}
   `;
 
   try {
     const response = await ai.models.generateContent({
       model,
-      contents: prompt,
+      contents: `DERS: ${course}, SINIF: ${grade}, ZORLUK: ${difficulty}, KAZANIM: ${outcome}, ADET: ${count}`,
       config: {
         systemInstruction,
         responseMimeType: "application/json",
@@ -67,14 +68,14 @@ export const generateQuestions = async (
 
     const text = response.text;
     if (!text) throw new Error("Yapay zeka yanıt üretemedi.");
-
+    
     return JSON.parse(text).map((q: any, i: number) => ({
       ...q,
       id: `gen-${Date.now()}-${i}`
     }));
   } catch (error: any) {
-    console.error("Gemini Servis Hatası:", error);
-    throw new Error(error.message || "Sorular oluşturulurken bir teknik hata oluştu.");
+    console.error("Generate Error:", error);
+    throw new Error(error.message || "Soru üretilirken teknik bir hata oluştu.");
   }
 };
 
@@ -83,39 +84,30 @@ export const gradeSubmission = async (
   submission: StudentSubmission,
   tone: FeedbackTone = 'encouraging'
 ): Promise<{ results: GradingResult[]; totalScore: number }> => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) throw new Error("API Anahtarı eksik.");
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("API anahtarı bulunamadı.");
 
   const ai = new GoogleGenAI({ apiKey });
   const model = 'gemini-3-flash-preview';
   
   const toneInstruction = {
-    encouraging: "Öğrenciyi motive eden, gelişim odaklı, yapıcı ve nazik bir dil kullan.",
-    academic: "Resmi, teknik terimlere odaklanan, profesyonel ve akademik standartlarda bir dil kullan.",
-    concise: "Sadece hatayı belirten, çok kısa, öz ve net geri bildirim ver."
+    encouraging: "Öğrenciyi motive eden, gelişim odaklı dil kullan.",
+    academic: "Resmi ve akademik bir dil kullan.",
+    concise: "Kısa ve öz geri bildirim ver."
   }[tone];
 
   const systemInstruction = `
-    Sen uzman bir kıdemli öğretmensin. Görevin, el yazısı sınav kağıtını titizlikle analiz etmektir.
-    GERİ BİLDİRİM TONU: ${toneInstruction}
-    
-    ANALİZ KURALLARI:
-    1. OCR: Görüntüdeki el yazısını dijital metne dök.
-    2. ANLAM ANALİZİ: Yanıtı rubrikteki anlamsal karşılığına göre değerlendir.
-    3. GÜVEN SKORU: El yazısı netliğine göre 0.0-1.0 arası bir puan ver.
-    Yanıtı JSON formatında döndür.
-  `;
-
-  const prompt = `
-    SINAV: ${exam.courseName}
-    SORULAR: ${JSON.stringify(exam.questions.map(q => ({ id: q.id, text: q.text, key: q.expectedAnswer })))}
+    Öğrencinin el yazısı sınav kağıdını analiz et.
+    Resimdeki el yazısını OCR ile oku ve rubrikteki kriterlere göre puanla.
+    Geri bildirim tonu: ${toneInstruction}
+    Yanıtı mutlaka geçerli bir JSON array olarak döndür.
   `;
 
   try {
     const response = await ai.models.generateContent({
       model,
       contents: [
-        { text: prompt },
+        { text: `SINAV: ${exam.courseName}, SORULAR: ${JSON.stringify(exam.questions.map(q => ({id: q.id, text: q.text, expected: q.expectedAnswer})))}` },
         { inlineData: { mimeType: 'image/jpeg', data: submission.base64Data } }
       ],
       config: {
@@ -125,14 +117,14 @@ export const gradeSubmission = async (
     });
 
     const text = response.text;
-    if (!text) throw new Error("Okuma başarısız.");
-
+    if (!text) throw new Error("Kağıt analizi yapılamadı.");
+    
     const results: GradingResult[] = JSON.parse(text);
     const totalScore = results.reduce((acc, curr) => acc + (curr.score || 0), 0);
 
     return { results, totalScore };
   } catch (error: any) {
-    console.error("Grade Hatası:", error);
-    throw new Error("Kağıt analizi hatası: " + error.message);
+    console.error("Grading Error:", error);
+    throw new Error("Kağıt analizi sırasında bir hata oluştu.");
   }
 };
