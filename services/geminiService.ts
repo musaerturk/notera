@@ -2,10 +2,10 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Exam, GradingResult, StudentSubmission, Question, FeedbackTone } from "../types";
 
 const getApiKey = () => {
-  // Vite define ile enjekte edilen anahtarı kontrol et
+  // Vite 'define' ile enjekte edilen anahtarı kontrol eder
   const key = process.env.API_KEY;
-  if (!key || key === "undefined" || key === "" || key.length < 10) {
-    console.error("Gemini API Key eksik veya geçersiz!");
+  if (!key || key === "undefined" || key === "") {
+    console.error("Gemini API Anahtarı bulunamadı! Netlify ayarlarını kontrol edin.");
     return null;
   }
   return key;
@@ -20,7 +20,7 @@ export const generateQuestions = async (
 ): Promise<Question[]> => {
   const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("Lütfen Netlify ayarlarından API_KEY değişkenini tanımlayın ve tekrar Deploy edin.");
+    throw new Error("Sistem yapılandırması tamamlanmadı. Lütfen API anahtarını Netlify paneline ekleyin.");
   }
 
   const ai = new GoogleGenAI({ apiKey });

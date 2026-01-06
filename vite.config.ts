@@ -3,13 +3,12 @@ import react from '@vitejs/plugin-react';
 import process from 'node:process';
 
 export default defineConfig(({ mode }) => {
-  // .env dosyalarındaki ve sistemdeki (Netlify) değişkenleri yükle
   const env = loadEnv(mode, process.cwd(), '');
   
   return {
     plugins: [react()],
     define: {
-      // API_KEY'i derleme anında koda gömer
+      // Netlify veya yerel ortamdaki API_KEY'i koda enjekte eder
       'process.env.API_KEY': JSON.stringify(env.API_KEY || process.env.API_KEY)
     },
     server: {
