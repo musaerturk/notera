@@ -2,10 +2,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Exam, GradingResult, StudentSubmission, Question, FeedbackTone } from "../types";
 
 const getApiKey = () => {
-  // Vite 'define' ile enjekte edilen anahtarı kontrol eder
   const key = process.env.API_KEY;
   if (!key || key === "undefined" || key === "") {
-    console.error("Gemini API Anahtarı bulunamadı! Netlify ayarlarını kontrol edin.");
     return null;
   }
   return key;
@@ -20,24 +18,18 @@ export const generateQuestions = async (
 ): Promise<Question[]> => {
   const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("Sistem yapılandırması tamamlanmadı. Lütfen API anahtarını Netlify paneline ekleyin.");
+    throw new Error("Gemini API Anahtarı Bulunamadı! Lütfen Netlify -> Site Settings -> Environment Variables kısmına API_KEY ekleyin.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
   const model = 'gemini-3-flash-preview';
   
-  const systemInstruction = `
-    Sen dünya standartlarında bir eğitim teknolojileri uzmanı ve ölçme değerlendirme profesörüsün. 
-    Verilen sınıf düzeyi, ders adı, öğrenme çıktısı (kazanım) ve zorluk seviyesine tam uyumlu, 
-    öğrencinin bilgisini derinlemesine ölçen profesyonel açık uçlu sınav soruları hazırlarsın.
-  `;
-
   try {
     const response = await ai.models.generateContent({
       model,
       contents: `DERS: ${course}, SINIF: ${grade}, ZORLUK: ${difficulty}, KAZANIM: ${outcome}, ADET: ${count}`,
       config: {
-        systemInstruction,
+        systemInstruction: "Sen profesyonel bir eğitim uzmanısın. Kazanımlara uygun sınav soruları üretirsin.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -66,16 +58,15 @@ export const generateQuestions = async (
       }
     });
 
-    const text = response.text;
-    if (!text) throw new Error("Yapay zeka yanıt üretemedi.");
+    if (!response.text) throw new Error("Yapay zeka boş yanıt döndürdü.");
     
-    return JSON.parse(text).map((q: any, i: number) => ({
+    return JSON.parse(response.text).map((q: any, i: number) => ({
       ...q,
       id: `gen-${Date.now()}-${i}`
     }));
   } catch (error: any) {
-    console.error("Generate Error:", error);
-    throw new Error(error.message || "Soru üretilirken teknik bir hata oluştu.");
+    console.error("AI Soru Üretme Hatası Detayı:", error);
+    throw new Error(error.message || "Teknik bir hata oluştu.");
   }
 };
 
@@ -85,46 +76,58 @@ export const gradeSubmission = async (
   tone: FeedbackTone = 'encouraging'
 ): Promise<{ results: GradingResult[]; totalScore: number }> => {
   const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API anahtarı bulunamadı.");
+  if (!apiKey) throw new Error("API Anahtarı Eksik.");
 
   const ai = new GoogleGenAI({ apiKey });
   const model = 'gemini-3-flash-preview';
+
+  // Soruları ve puanlama kriterlerini zenginleştirilmiş halde hazırlayalım
+  const enrichedQuestions = exam.questions.map(q => ({
+    id: q.id,
+    text: q.text,
+    expectedAnswer: q.expectedAnswer,
+    maxScore: q.maxScore,
+    gradingSteps: q.gradingSteps || []
+  }));
   
-  const toneInstruction = {
-    encouraging: "Öğrenciyi motive eden, gelişim odaklı dil kullan.",
-    academic: "Resmi ve akademik bir dil kullan.",
-    concise: "Kısa ve öz geri bildirim ver."
-  }[tone];
-
-  const systemInstruction = `
-    Öğrencinin el yazısı sınav kağıdını analiz et.
-    Resimdeki el yazısını OCR ile oku ve rubrikteki kriterlere göre puanla.
-    Geri bildirim tonu: ${toneInstruction}
-    Yanıtı mutlaka geçerli bir JSON array olarak döndür.
-  `;
-
   try {
     const response = await ai.models.generateContent({
       model,
       contents: [
-        { text: `SINAV: ${exam.courseName}, SORULAR: ${JSON.stringify(exam.questions.map(q => ({id: q.id, text: q.text, expected: q.expectedAnswer})))}` },
+        { text: `SINAV BİLGİSİ: ${exam.courseName} - ${exam.examName}. \nSORULAR VE KRİTERLER: ${JSON.stringify(enrichedQuestions)}` },
         { inlineData: { mimeType: 'image/jpeg', data: submission.base64Data } }
       ],
       config: {
-        systemInstruction,
+        systemInstruction: `
+          Sen uzman bir öğretmensin. Öğrencinin el yazısı sınav kağıdını OCR ile oku. 
+          Her soru için 'score' değerini belirlerken ilgili sorunun 'maxScore' değerini ASLA aşma.
+          Cevap kısmen doğruysa rubrikteki (gradingSteps) puanlara göre adil davran.
+          Sonucu her soru için JSON objesi içeren bir array olarak dön.
+          JSON yapısı: [{ "questionId": "...", "extractedText": "...", "score": 0, "reason": "...", "feedback": "...", "confidence": 0.0 }]
+        `,
         responseMimeType: "application/json"
       }
     });
 
-    const text = response.text;
-    if (!text) throw new Error("Kağıt analizi yapılamadı.");
+    if (!response.text) throw new Error("Görüntü işlenemedi.");
     
-    const results: GradingResult[] = JSON.parse(text);
+    let results: GradingResult[] = JSON.parse(response.text);
+
+    // GÜVENLİK KATMANI: AI hata yapsa bile kod seviyesinde puanı maxScore ile sınırla
+    results = results.map(res => {
+      const originalQuestion = exam.questions.find(q => q.id === res.questionId);
+      const max = originalQuestion?.maxScore || 100;
+      return {
+        ...res,
+        score: Math.min(Math.max(0, res.score), max) // Puanı 0 ile maxScore arasına hapset
+      };
+    });
+
     const totalScore = results.reduce((acc, curr) => acc + (curr.score || 0), 0);
 
     return { results, totalScore };
   } catch (error: any) {
-    console.error("Grading Error:", error);
-    throw new Error("Kağıt analizi sırasında bir hata oluştu.");
+    console.error("AI Değerlendirme Hatası Detayı:", error);
+    throw new Error("Kağıt analizi yapılamadı veya geçersiz format döndü.");
   }
 };
