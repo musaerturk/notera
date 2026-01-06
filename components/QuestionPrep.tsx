@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { generateQuestions } from '../services/geminiService';
 import { Question } from '../types';
@@ -32,7 +31,8 @@ const QuestionPrep: React.FC<QuestionPrepProps> = ({ onQuestionsGenerated }) => 
       const questions = await generateQuestions(grade, course, outcome, difficulty);
       setGeneratedQuestions(questions);
     } catch (err: any) {
-      alert(`Bir sorun oluştu: ${err.message || "Lütfen internet bağlantınızı ve API anahtarınızı kontrol edin."}`);
+      // Hata mesajını daha net göster
+      alert(`Sınav Hazırlama Hatası:\n${err.message || "Bilinmeyen bir hata oluştu."}`);
     } finally {
       setIsGenerating(false);
     }
@@ -44,9 +44,6 @@ const QuestionPrep: React.FC<QuestionPrepProps> = ({ onQuestionsGenerated }) => 
   return (
     <div className="animate-fade-in max-w-4xl mx-auto pb-20">
       <div className="mb-12 p-12 bg-notera-purple rounded-[4rem] shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
-          <svg className="w-64 h-64" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
-        </div>
         <div className="relative z-10 space-y-4">
           <h2 className="text-5xl font-black text-white uppercase tracking-tighter leading-none">Sınavı <span className="text-notera-turquoise italic">Birlikte</span> Oluşturalım</h2>
           <p className="text-slate-200 font-medium text-xl max-w-xl">NOTERA önerir, sen onaylarsın. Kazanımlara uygun, ölçücü sorular hazırlayalım.</p>

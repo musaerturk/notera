@@ -47,7 +47,7 @@ const UploadSection: React.FC<UploadSectionProps> = ({ exam, onUpload, settings 
     const newSubmissions: StudentSubmission[] = [];
 
     for (let i = 0; i < fileDatas.length; i++) {
-      // İlerleme yüzdesi düzeltildi
+      // İlerleme yüzdesi: i+1 kullanarak %100'e tam ulaşması sağlandı
       setUploadProgress(Math.round(((i + 1) / fileDatas.length) * 100));
       const { data, name } = fileDatas[i];
       
@@ -76,6 +76,7 @@ const UploadSection: React.FC<UploadSectionProps> = ({ exam, onUpload, settings 
     onUpload(newSubmissions);
     setIsProcessing(false);
     
+    // İşlem bittiğinde kamerayı durdur
     if (videoRef.current?.srcObject) {
       (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
     }
