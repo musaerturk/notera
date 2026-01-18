@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Exam, StudentSubmission, Question, UserSettings, PricingPlan } from './types';
+import { Exam, StudentSubmission, Question, UserSettings, PricingPlan, GradedExam } from './types';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ExamSetup from './components/ExamSetup';
@@ -19,11 +19,13 @@ import CheckoutView from './components/CheckoutView';
 import ExamoraInfoView from './components/ExamoraInfoView';
 import EduMetrikInfoView from './components/EduMetrikInfoView';
 import PrivacyModal from './components/PrivacyModal';
+import AnswerKeyUpload from './components/AnswerKeyUpload';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'home' | 'setup' | 'upload' | 'dashboard' | 'detail' | 'analytics' | 'question-prep' | 'settings' | 'exam-paper' | 'info' | 'admin' | 'admin-login' | 'pricing' | 'checkout' | 'examora-info' | 'edumetrik-info'>('info');
+  const [currentView, setCurrentView] = useState<'home' | 'setup' | 'upload' | 'dashboard' | 'detail' | 'analytics' | 'question-prep' | 'settings' | 'exam-paper' | 'info' | 'admin' | 'admin-login' | 'pricing' | 'checkout' | 'examora-info' | 'edumetrik-info' | 'answer-key-upload'>('info');
   const [exam, setExam] = useState<Exam | null>(null);
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
+  const [examHistory, setExamHistory] = useState<GradedExam[]>([]);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [prefilledQuestions, setPrefilledQuestions] = useState<Question[]>([]);
@@ -35,43 +37,37 @@ const App: React.FC = () => {
     theme: 'light',
     aiSensitivity: 'normal',
     feedbackTone: 'encouraging',
-    analyticsLevel: 'basic'
+    analyticsLevel: 'basic',
+    savedClasses: []
   });
   
   const [adminPassword, setAdminPassword] = useState("");
-  const [adminError, setAdminError] = useState(false);
+
+  const STORAGE_KEYS = {
+    EXAM: 'notera_active_exam_v3',
+    SUBMISSIONS: 'notera_active_submissions_v3',
+    SETTINGS: 'notera_settings_v3',
+    HISTORY: 'notera_history_v3',
+    PRIVACY: 'notera_privacy_accepted_v3'
+  };
 
   useEffect(() => {
-    const savedExam = localStorage.getItem('notera_exam');
-    const savedSubmissions = localStorage.getItem('notera_submissions');
-    const savedSettings = localStorage.getItem('notera_settings');
-    const privacyAccepted = localStorage.getItem('notera_privacy_accepted');
+    const savedExam = localStorage.getItem(STORAGE_KEYS.EXAM);
+    const savedSubmissions = localStorage.getItem(STORAGE_KEYS.SUBMISSIONS);
+    const savedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    const savedHistory = localStorage.getItem(STORAGE_KEYS.HISTORY);
+    const privacyAccepted = localStorage.getItem(STORAGE_KEYS.PRIVACY);
 
     if (!privacyAccepted) setShowPrivacy(true);
     if (savedExam) setExam(JSON.parse(savedExam));
     if (savedSubmissions) setSubmissions(JSON.parse(savedSubmissions));
+    if (savedHistory) setExamHistory(JSON.parse(savedHistory));
     if (savedSettings) {
-      const parsedSettings = JSON.parse(savedSettings);
-      setSettings({
-        ...parsedSettings,
-        analyticsLevel: parsedSettings.analyticsLevel || 'basic'
-      });
-      applyTheme(parsedSettings.theme);
+      const parsed = JSON.parse(savedSettings);
+      setSettings(parsed);
+      applyTheme(parsed.theme);
     }
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.shiftKey && e.altKey && e.code === 'KeyA') {
-        setCurrentView('admin-login');
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  const handlePrivacyAccept = () => {
-    localStorage.setItem('notera_privacy_accepted', 'true');
-    setShowPrivacy(false);
-  };
 
   const applyTheme = (theme: 'dark' | 'light' | 'system') => {
     const root = window.document.documentElement;
@@ -82,123 +78,110 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAdminAuth = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (adminPassword === "admin123") {
-      setCurrentView('admin');
-      setAdminError(false);
-      setAdminPassword("");
-      window.scrollTo(0, 0);
-    } else {
-      setAdminError(true);
-    }
+  const saveToLocal = (updatedExam: Exam | null, updatedSubmissions: StudentSubmission[], updatedHistory?: GradedExam[]) => {
+    if (updatedExam) localStorage.setItem(STORAGE_KEYS.EXAM, JSON.stringify(updatedExam));
+    else localStorage.removeItem(STORAGE_KEYS.EXAM);
+    
+    localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(updatedSubmissions));
+    if (updatedHistory) localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(updatedHistory));
   };
 
-  const saveToLocal = (updatedExam: Exam | null, updatedSubmissions: StudentSubmission[]) => {
-    if (updatedExam) localStorage.setItem('notera_exam', JSON.stringify(updatedExam));
-    localStorage.setItem('notera_submissions', JSON.stringify(updatedSubmissions));
-  };
-
-  const handleSettingsUpdate = (newSettings: UserSettings) => {
-    setSettings(newSettings);
-    localStorage.setItem('notera_settings', JSON.stringify(newSettings));
-    applyTheme(newSettings.theme);
+  const startNewExamFlow = (targetView: typeof currentView) => {
+    localStorage.removeItem(STORAGE_KEYS.EXAM);
+    localStorage.removeItem(STORAGE_KEYS.SUBMISSIONS);
+    setExam(null);
+    setSubmissions([]);
+    setPrefilledQuestions([]);
+    setCurrentView(targetView);
+    window.scrollTo(0, 0);
   };
 
   const handleExamSaved = (newExam: Exam) => {
     setExam(newExam);
-    saveToLocal(newExam, submissions);
+    setSubmissions([]); 
+    saveToLocal(newExam, []);
     setCurrentView('exam-paper');
+  };
+
+  const handleAnswerKeyParsed = (parsedData: Partial<Exam> & { questions: Question[] }, quickStart: boolean) => {
+    setSubmissions([]);
+    localStorage.removeItem(STORAGE_KEYS.SUBMISSIONS);
+    const newExamId = `exam-${Date.now()}`;
+    
+    if (quickStart) {
+      const newExam: Exam = {
+        id: newExamId,
+        type: 'open-ended',
+        classSection: parsedData.classSection || 'Belirtilmedi',
+        courseName: parsedData.courseName || 'Genel Ders',
+        examName: parsedData.examName || 'Yazılı Sınav',
+        date: new Date().toISOString(),
+        questions: parsedData.questions
+      };
+      setExam(newExam);
+      saveToLocal(newExam, []);
+      setCurrentView('upload');
+    } else {
+      setPrefilledQuestions(parsedData.questions);
+      setExam(null);
+      saveToLocal(null, []);
+      setCurrentView('setup');
+    }
   };
 
   const handleUploadComplete = (newSubmissions: StudentSubmission[]) => {
     const updated = [...submissions, ...newSubmissions];
     setSubmissions(updated);
-    saveToLocal(exam, updated);
-    setCurrentView('dashboard');
-  };
-
-  const handleSubmissionUpdate = (updatedSub: StudentSubmission) => {
-    const updated = submissions.map(s => s.id === updatedSub.id ? updatedSub : s);
-    setSubmissions(updated);
-    saveToLocal(exam, updated);
-  };
-
-  const handleQuestionsGenerated = (questions: Question[]) => {
-    setPrefilledQuestions(questions);
-    setCurrentView('setup');
-  };
-
-  const handlePlanSelection = (plan: PricingPlan) => {
-    if (plan.price === 0) {
-      setSettings({ ...settings, isPremium: false, analyticsLevel: 'basic' });
-      setCurrentView('home');
-    } else {
-      setSelectedPlan(plan);
-      setCurrentView('checkout');
-    }
-  };
-
-  const handlePaymentSuccess = () => {
-    if (selectedPlan) {
-      const newSettings: UserSettings = {
-        ...settings,
-        isPremium: true,
-        analyticsLevel: selectedPlan.analyticsLevel
+    
+    if (exam) {
+      const avg = updated.reduce((a, b) => a + b.totalScore, 0) / (updated.length || 1);
+      const gradedExam: GradedExam = {
+        id: Date.now().toString(),
+        exam: exam,
+        submissions: updated,
+        averageScore: Math.round(avg),
+        createdAt: new Date().toISOString()
       };
-      setSettings(newSettings);
-      localStorage.setItem('notera_settings', JSON.stringify(newSettings));
-      setCurrentView('home');
+      const newHistory = [gradedExam, ...examHistory];
+      setExamHistory(newHistory);
+      saveToLocal(exam, updated, newHistory);
     }
+    setCurrentView('dashboard');
   };
 
   const renderView = () => {
     switch (currentView) {
       case 'info': return <AboutView onStart={() => setCurrentView('pricing')} />;
-      case 'pricing': return <PricingView onSelectPlan={handlePlanSelection} />;
-      case 'checkout': return selectedPlan ? <CheckoutView plan={selectedPlan} onCancel={() => setCurrentView('pricing')} onSuccess={handlePaymentSuccess} /> : null;
-      case 'examora-info': return <ExamoraInfoView onStart={() => setCurrentView('question-prep')} />;
-      case 'edumetrik-info': return <EduMetrikInfoView onStart={() => setCurrentView('dashboard')} isExamSet={!!exam} />;
-      case 'home': return <HomePanel onNavigate={(view) => setCurrentView(view)} isExamSet={!!exam} hasSubmissions={submissions.length > 0} />;
-      case 'settings': return <SettingsPanel settings={settings} onUpdate={handleSettingsUpdate} onResetAll={() => { localStorage.clear(); window.location.reload(); }} />;
-      case 'question-prep': return <QuestionPrep onQuestionsGenerated={handleQuestionsGenerated} />;
+      case 'pricing': return <PricingView onSelectPlan={(p) => { if(p.price === 0) setCurrentView('home'); else { setSelectedPlan(p); setCurrentView('checkout'); }}} />;
+      case 'checkout': return <CheckoutView plan={selectedPlan!} onCancel={() => setCurrentView('pricing')} onSuccess={() => { setSettings({...settings, isPremium: true}); setCurrentView('home'); }} />;
+      case 'home': return <HomePanel onNavigate={startNewExamFlow} onResume={(v) => setCurrentView(v)} isExamSet={!!exam} hasSubmissions={submissions.length > 0} />;
+      case 'answer-key-upload': return <AnswerKeyUpload onParsed={handleAnswerKeyParsed} onCancel={() => setCurrentView('home')} />;
       case 'setup': return <ExamSetup initialExam={exam} onSave={handleExamSaved} prefilledQuestions={prefilledQuestions} />;
-      case 'exam-paper': return exam ? <ExamPaper exam={exam} settings={settings} onBack={() => setCurrentView('setup')} onStartGrading={() => setCurrentView('upload')} /> : null;
-      case 'upload': return <UploadSection onUpload={handleUploadComplete} exam={exam!} settings={settings} />;
+      case 'upload': return <UploadSection exam={exam!} onUpload={handleUploadComplete} settings={settings} />;
       case 'dashboard': return <GradingDashboard submissions={submissions} settings={settings} onSelect={(id) => { setSelectedSubmissionId(id); setCurrentView('detail'); }} onReset={() => { setSubmissions([]); saveToLocal(exam, []); }} onViewAnalytics={() => setCurrentView('analytics')} />;
       case 'detail':
         const sub = submissions.find(s => s.id === selectedSubmissionId);
-        return sub ? <GradingDetail submission={sub} exam={exam!} onBack={() => setCurrentView('dashboard')} onUpdate={handleSubmissionUpdate} /> : null;
-      case 'analytics': return <AnalyticsView submissions={submissions} exam={exam!} settings={settings} onBack={() => setCurrentView('dashboard')} />;
-      case 'admin': return <AdminPanel />;
+        return sub ? <GradingDetail submission={sub} exam={exam!} onBack={() => setCurrentView('dashboard')} onUpdate={(u) => { const updated = submissions.map(s => s.id === u.id ? u : s); setSubmissions(updated); saveToLocal(exam, updated); }} /> : null;
+      case 'analytics': return <AnalyticsView submissions={submissions} exam={exam!} settings={settings} onBack={() => setCurrentView('dashboard')} history={examHistory} />;
+      case 'question-prep': return <QuestionPrep onQuestionsGenerated={(q) => { setPrefilledQuestions(q); setCurrentView('setup'); }} />;
+      case 'settings': return <SettingsPanel settings={settings} onUpdate={(s) => { setSettings(s); applyTheme(s.theme); localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(s)); }} onResetAll={() => { localStorage.clear(); window.location.reload(); }} />;
+      case 'exam-paper': return <ExamPaper exam={exam!} settings={settings} onBack={() => setCurrentView('setup')} onStartGrading={() => setCurrentView('upload')} />;
       case 'admin-login': return (
-        <div className="min-h-[60vh] flex items-center justify-center animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 p-12 rounded-[3rem] border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-md text-center">
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase mb-8">Admin Girişi</h2>
-            <form onSubmit={handleAdminAuth} className="space-y-4">
-              <input 
-                type="password" 
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="Şifre"
-                className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-2 rounded-2xl outline-none font-black text-center"
-                autoFocus
-              />
-              <button type="submit" className="w-full py-5 bg-notera-purple text-white rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all">Giriş Yap</button>
-              <button type="button" onClick={() => setCurrentView('home')} className="w-full text-slate-400 font-black text-[10px] uppercase tracking-widest">İptal</button>
-            </form>
-          </div>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+          <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="Admin Şifresi" className="px-6 py-4 rounded-2xl bg-white dark:bg-slate-800 border-2 outline-none focus:border-notera-purple transition-all" />
+          <button onClick={() => { if(adminPassword === "admin123") setCurrentView('admin'); }} className="px-12 py-4 bg-notera-purple text-white rounded-2xl font-black uppercase tracking-widest">Giriş Yap</button>
         </div>
       );
-      default: return <HomePanel onNavigate={(view) => setCurrentView(view)} isExamSet={!!exam} hasSubmissions={submissions.length > 0} />;
+      case 'admin': return <AdminPanel />;
+      default: return <HomePanel onNavigate={startNewExamFlow} onResume={(v) => setCurrentView(v)} isExamSet={!!exam} hasSubmissions={submissions.length > 0} />;
     }
   };
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${settings.theme === 'dark' ? 'bg-notera-dark text-slate-100' : 'bg-notera-gray text-slate-900'}`}>
-      {showPrivacy && <PrivacyModal onAccept={handlePrivacyAccept} />}
-      <Header currentView={currentView} onNavigate={(view) => setCurrentView(view)} isExamSet={!!exam} isPremium={settings.isPremium} />
-      <main className="flex-grow container mx-auto px-4 py-8 max-w-5xl">
+      {showPrivacy && <PrivacyModal onAccept={() => { setShowPrivacy(false); localStorage.setItem(STORAGE_KEYS.PRIVACY, 'true'); }} />}
+      <Header currentView={currentView} onNavigate={(v) => setCurrentView(v)} isExamSet={!!exam} isPremium={settings.isPremium} />
+      <main className="flex-grow container mx-auto px-4 py-8 max-w-6xl">
         {renderView()}
       </main>
       <Footer onAdminClick={() => setCurrentView('admin-login')} onNavigate={setCurrentView} />

@@ -1,17 +1,35 @@
 
-import React, { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { StudentSubmission, Exam, UserSettings } from '../types';
+import React, { useMemo, useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, LineChart, Line } from 'recharts';
+import { StudentSubmission, Exam, UserSettings, GradedExam } from '../types';
 
 interface AnalyticsViewProps {
   submissions: StudentSubmission[];
   exam: Exam;
   settings: UserSettings;
   onBack: () => void;
+  history?: GradedExam[];
 }
 
-const AnalyticsView: React.FC<AnalyticsViewProps> = ({ submissions, exam, settings, onBack }) => {
+const AnalyticsView: React.FC<AnalyticsViewProps> = ({ submissions, exam, settings, onBack, history = [] }) => {
   const level = settings.analyticsLevel || 'basic';
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
+
+  const filteredHistory = useMemo(() => {
+    if (selectedClassFilter === 'all') return history;
+    return history.filter(h => h.exam.classSection === selectedClassFilter);
+  }, [history, selectedClassFilter]);
+
+  const progressData = useMemo(() => {
+    return filteredHistory
+      .slice()
+      .reverse()
+      .map(h => ({
+        date: new Date(h.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' }),
+        ort: h.averageScore,
+        name: h.exam.examName
+      }));
+  }, [filteredHistory]);
 
   const successData = useMemo(() => {
     const successful = submissions.filter(s => s.totalScore >= 50).length;
@@ -35,49 +53,32 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ submissions, exam, settin
 
   const averageScore = Math.round(submissions.reduce((a, b) => a + b.totalScore, 0) / (submissions.length || 1));
 
-  const exportToCSV = () => {
-    if (level === 'basic') return;
-    const headers = ["Öğrenci Adı", "Toplam Puan", "Durum"];
-    const rows = submissions.map(s => [s.studentName, s.totalScore, s.totalScore >= 50 ? "Geçti" : "Kaldı"]);
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${exam.courseName}_Not_Listesi.csv`);
-    document.body.appendChild(link);
-    link.click();
-  };
-
   return (
     <div className="animate-fade-in pb-24 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-10 bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl no-print">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl no-print">
         <div className="flex items-center gap-6">
           <button onClick={onBack} className="w-12 h-12 flex items-center justify-center bg-indigo-600 text-white rounded-2xl">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
           <div className="space-y-1">
             <h2 className="text-3xl font-black text-white uppercase tracking-tighter">{exam.courseName} - ANALİZ</h2>
-            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em]">{level} sürüm raporu</span>
+            <div className="flex gap-2">
+              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em]">{level} sürüm raporu</span>
+              {history.length > 0 && <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.4em]">• {history.length} Kayıtlı Sınav</span>}
+            </div>
           </div>
         </div>
+        
         <div className="flex gap-4">
-          {level !== 'basic' && (
-            <button onClick={exportToCSV} className="px-8 py-4 bg-notera-turquoise text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl flex items-center gap-2">
-               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-               EXCEL (CSV) AKTAR
-            </button>
-          )}
-          {level === 'institutional' && (
-            <button onClick={() => window.print()} className="px-8 py-4 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase shadow-xl">PDF RAPORU</button>
-          )}
-          {level === 'basic' && (
-            <div className="px-6 py-4 bg-slate-800 text-slate-400 rounded-2xl font-black text-[9px] uppercase tracking-widest flex items-center gap-2">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
-              PDF & EXCEL KİLİTLİ
-            </div>
-          )}
+          <select 
+            value={selectedClassFilter} 
+            onChange={(e) => setSelectedClassFilter(e.target.value)}
+            className="px-6 py-3 bg-slate-800 text-white rounded-xl text-xs font-black uppercase outline-none border border-slate-700"
+          >
+            <option value="all">Tüm Sınıflar</option>
+            {settings.savedClasses.map(cls => <option key={cls} value={cls}>{cls}</option>)}
+          </select>
+          <button onClick={() => window.print()} className="px-8 py-4 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase shadow-xl">PDF RAPORU</button>
         </div>
       </div>
 
@@ -99,11 +100,35 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ submissions, exam, settin
         </div>
 
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[3rem] p-10 shadow-xl border border-slate-100 dark:border-slate-800">
-          <div className="flex justify-between items-center mb-10">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SORU BAZLI ANALİZ (%)</h3>
-            {level === 'basic' && <span className="text-[9px] font-black text-rose-400 uppercase">Önizleme Modu</span>}
+          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10">GELİŞİM TRENDİ (TARİHSEL)</h3>
+          <div className="h-64">
+            {progressData.length > 1 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={progressData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f910" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11}} domain={[0, 100]} />
+                  <Tooltip 
+                    contentStyle={{borderRadius: '1.5rem', border: 'none', backgroundColor: '#3B2F5B', color: 'white'}} 
+                    labelStyle={{fontWeight: 'black', marginBottom: '5px'}}
+                  />
+                  <Line type="monotone" dataKey="ort" stroke="#4FB6B2" strokeWidth={5} dot={{r: 8, fill: '#4FB6B2', strokeWidth: 0}} activeDot={{r: 10}} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-40">
+                <div className="text-4xl">📉</div>
+                <p className="text-[10px] font-black uppercase tracking-widest">Trend analizi için en az 2 sınav sonucu gerekir.</p>
+              </div>
+            )}
           </div>
-          <div className={`h-64 ${level === 'basic' ? 'blur-sm grayscale pointer-events-none' : ''}`}>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 shadow-xl border border-slate-100 dark:border-slate-800">
+          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10">SORU BAZLI BAŞARI (%)</h3>
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f910" />
@@ -116,32 +141,29 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ submissions, exam, settin
               </BarChart>
             </ResponsiveContainer>
           </div>
-          {level === 'basic' && (
-            <div className="mt-8 p-6 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl text-center">
-              <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Soru bazlı başarı analizini görmek için <span className="font-black">ADVANCED</span> plana yükseltin.</p>
-            </div>
-          )}
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 shadow-xl border border-slate-100 dark:border-slate-800">
+          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">SINIFLAR ARASI KIYASLAMA</h3>
+          <div className="space-y-4">
+            {settings.savedClasses.slice(0, 4).map((cls, idx) => {
+              const clsAvg = Math.round(history.filter(h => h.exam.classSection === cls).reduce((a, b) => a + b.averageScore, 0) / (history.filter(h => h.exam.classSection === cls).length || 1));
+              return (
+                <div key={idx} className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <span className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{cls}</span>
+                  <div className="flex-1 mx-8 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-notera-purple" style={{width: `${clsAvg}%`}}></div>
+                  </div>
+                  <span className="text-lg font-black text-notera-purple dark:text-notera-turquoise">{clsAvg}</span>
+                </div>
+              );
+            })}
+            {settings.savedClasses.length === 0 && (
+              <p className="text-center text-slate-400 text-xs italic py-10">Karşılaştırma yapılacak veri henüz yok.</p>
+            )}
+          </div>
         </div>
       </div>
-
-      {level === 'institutional' && (
-        <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 shadow-xl border border-slate-100 dark:border-slate-800 animate-slide-up">
-           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">OKUL GENELİ KARŞILAŞTIRMA (SİMÜLASYON)</h3>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                { label: 'Zümre Sıralaması', val: '2 / 8', desc: 'Biyoloji öğretmenleri arasında' },
-                { label: 'Okul Ortalaması Sapması', val: '+12.4', desc: 'Genel ortalamanın üzerinde' },
-                { label: 'Kazanım Tamamlama', val: '%88', desc: 'Hücre ünitesi hedefi' }
-              ].map((m, i) => (
-                <div key={i} className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
-                  <div className="text-2xl font-black text-notera-purple dark:text-notera-turquoise mb-1">{m.val}</div>
-                  <div className="text-[10px] font-black text-slate-900 dark:text-white uppercase mb-1">{m.label}</div>
-                  <div className="text-[9px] font-bold text-slate-400">{m.desc}</div>
-                </div>
-              ))}
-           </div>
-        </div>
-      )}
     </div>
   );
 };

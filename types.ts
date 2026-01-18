@@ -1,4 +1,3 @@
-
 export interface GradingStep {
   text: string;
   score: number;
@@ -22,6 +21,14 @@ export interface Exam {
   examName: string;
   date: string;
   questions: Question[];
+}
+
+export interface GradedExam {
+  id: string;
+  exam: Exam;
+  submissions: StudentSubmission[];
+  averageScore: number;
+  createdAt: string;
 }
 
 export interface GradingResult {
@@ -57,6 +64,7 @@ export interface UserSettings {
   feedbackTone: FeedbackTone;
   isPremium?: boolean;
   analyticsLevel: AnalyticsLevel;
+  savedClasses: string[]; // Kayıtlı sınıflar listesi
 }
 
 // ADMIN & PAYMENT TYPES

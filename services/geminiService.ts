@@ -9,6 +9,73 @@ const getApiKey = () => {
   return key;
 };
 
+// YENİ: Cevap anahtarı görselinden sınav yapısını çıkaran fonksiyon
+export const parseAnswerKey = async (base64Image: string): Promise<Partial<Exam> & { questions: Question[] }> => {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("API Anahtarı bulunamadı.");
+
+  const ai = new GoogleGenAI({ apiKey });
+  const model = 'gemini-3-flash-preview';
+
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents: [
+        { text: "Bu görsel bir sınav cevap anahtarıdır. Lütfen görseldeki sınavın adını, ders adını ve her bir sorunun metnini, doğru cevabını ve puanını çıkar." },
+        { inlineData: { mimeType: 'image/jpeg', data: base64Image } }
+      ],
+      config: {
+        systemInstruction: "Sen bir sınav asistanısın. Görseldeki cevap anahtarını analiz et ve JSON formatında bir sınav yapısı dön. Puanlar belirtilmemişse mantıklı bir dağılım yap (toplam 100 olacak şekilde).",
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            examName: { type: Type.STRING },
+            courseName: { type: Type.STRING },
+            questions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  text: { type: Type.STRING },
+                  expectedAnswer: { type: Type.STRING },
+                  maxScore: { type: Type.NUMBER },
+                  gradingSteps: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        text: { type: Type.STRING },
+                        score: { type: Type.NUMBER }
+                      },
+                      required: ["text", "score"]
+                    }
+                  }
+                },
+                required: ["text", "expectedAnswer", "maxScore"]
+              }
+            }
+          },
+          required: ["questions"]
+        }
+      }
+    });
+
+    const result = JSON.parse(response.text || "{}");
+    return {
+      ...result,
+      questions: result.questions.map((q: any, i: number) => ({
+        ...q,
+        id: `aq-${Date.now()}-${i}`,
+        keywords: []
+      }))
+    };
+  } catch (error: any) {
+    console.error("Cevap Anahtarı Analiz Hatası:", error);
+    throw new Error("Cevap anahtarı okunamadı. Lütfen daha net bir fotoğraf çekin.");
+  }
+};
+
 export const generateQuestions = async (
   grade: string,
   course: string,
@@ -18,7 +85,7 @@ export const generateQuestions = async (
 ): Promise<Question[]> => {
   const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("Gemini API Anahtarı Bulunamadı! Lütfen Netlify -> Site Settings -> Environment Variables kısmına API_KEY ekleyin.");
+    throw new Error("Gemini API Anahtarı Bulunamadı!");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -65,7 +132,6 @@ export const generateQuestions = async (
       id: `gen-${Date.now()}-${i}`
     }));
   } catch (error: any) {
-    console.error("AI Soru Üretme Hatası Detayı:", error);
     throw new Error(error.message || "Teknik bir hata oluştu.");
   }
 };
@@ -81,7 +147,6 @@ export const gradeSubmission = async (
   const ai = new GoogleGenAI({ apiKey });
   const model = 'gemini-3-flash-preview';
 
-  // Soruları ve puanlama kriterlerini zenginleştirilmiş halde hazırlayalım
   const enrichedQuestions = exam.questions.map(q => ({
     id: q.id,
     text: q.text,
@@ -113,13 +178,12 @@ export const gradeSubmission = async (
     
     let results: GradingResult[] = JSON.parse(response.text);
 
-    // GÜVENLİK KATMANI: AI hata yapsa bile kod seviyesinde puanı maxScore ile sınırla
     results = results.map(res => {
       const originalQuestion = exam.questions.find(q => q.id === res.questionId);
       const max = originalQuestion?.maxScore || 100;
       return {
         ...res,
-        score: Math.min(Math.max(0, res.score), max) // Puanı 0 ile maxScore arasına hapset
+        score: Math.min(Math.max(0, res.score), max)
       };
     });
 
@@ -127,7 +191,6 @@ export const gradeSubmission = async (
 
     return { results, totalScore };
   } catch (error: any) {
-    console.error("AI Değerlendirme Hatası Detayı:", error);
-    throw new Error("Kağıt analizi yapılamadı veya geçersiz format döndü.");
+    throw new Error("Kağıt analizi yapılamadı.");
   }
 };
