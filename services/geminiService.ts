@@ -1,9 +1,11 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Exam, GradingResult, StudentSubmission, Question, FeedbackTone } from "../types";
 
 const getApiKey = () => {
+  // Vite tarafından inject edilen process.env.API_KEY değerini kontrol et
   const key = process.env.API_KEY;
-  if (!key || key === "undefined" || key === "") {
+  if (!key || key === "undefined" || key === "" || key === '""') {
     return null;
   }
   return key;
@@ -12,7 +14,7 @@ const getApiKey = () => {
 // YENİ: Cevap anahtarı görselinden sınav yapısını çıkaran fonksiyon
 export const parseAnswerKey = async (base64Image: string): Promise<Partial<Exam> & { questions: Question[] }> => {
   const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API Anahtarı bulunamadı.");
+  if (!apiKey) throw new Error("API Anahtarı bulunamadı. Lütfen ayarlardan veya ortam değişkenlerinden API anahtarını kontrol edin.");
 
   const ai = new GoogleGenAI({ apiKey });
   const model = 'gemini-3-flash-preview';
