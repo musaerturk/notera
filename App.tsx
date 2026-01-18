@@ -31,14 +31,8 @@ const App: React.FC = () => {
   const [prefilledQuestions, setPrefilledQuestions] = useState<Question[]>([]);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [settings, setSettings] = useState<UserSettings>({
-    teacherName: '',
-    schoolName: '',
-    subject: '',
-    theme: 'light',
-    aiSensitivity: 'normal',
-    feedbackTone: 'encouraging',
-    analyticsLevel: 'basic',
-    savedClasses: []
+    teacherName: '', schoolName: '', subject: '', theme: 'light', aiSensitivity: 'normal',
+    feedbackTone: 'encouraging', analyticsLevel: 'basic', savedClasses: []
   });
   
   const [adminPassword, setAdminPassword] = useState("");
@@ -81,7 +75,6 @@ const App: React.FC = () => {
   const saveToLocal = (updatedExam: Exam | null, updatedSubmissions: StudentSubmission[], updatedHistory?: GradedExam[]) => {
     if (updatedExam) localStorage.setItem(STORAGE_KEYS.EXAM, JSON.stringify(updatedExam));
     else localStorage.removeItem(STORAGE_KEYS.EXAM);
-    
     localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(updatedSubmissions));
     if (updatedHistory) localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(updatedHistory));
   };
@@ -107,16 +100,11 @@ const App: React.FC = () => {
     setSubmissions([]);
     localStorage.removeItem(STORAGE_KEYS.SUBMISSIONS);
     const newExamId = `exam-${Date.now()}`;
-    
     if (quickStart) {
       const newExam: Exam = {
-        id: newExamId,
-        type: 'open-ended',
-        classSection: parsedData.classSection || 'Belirtilmedi',
-        courseName: parsedData.courseName || 'Genel Ders',
-        examName: parsedData.examName || 'Yazılı Sınav',
-        date: new Date().toISOString(),
-        questions: parsedData.questions
+        id: newExamId, type: 'open-ended', classSection: parsedData.classSection || 'Belirtilmedi',
+        courseName: parsedData.courseName || 'Genel Ders', examName: parsedData.examName || 'Yazılı Sınav',
+        date: new Date().toISOString(), questions: parsedData.questions
       };
       setExam(newExam);
       saveToLocal(newExam, []);
@@ -132,16 +120,9 @@ const App: React.FC = () => {
   const handleUploadComplete = (newSubmissions: StudentSubmission[]) => {
     const updated = [...submissions, ...newSubmissions];
     setSubmissions(updated);
-    
     if (exam) {
       const avg = updated.reduce((a, b) => a + b.totalScore, 0) / (updated.length || 1);
-      const gradedExam: GradedExam = {
-        id: Date.now().toString(),
-        exam: exam,
-        submissions: updated,
-        averageScore: Math.round(avg),
-        createdAt: new Date().toISOString()
-      };
+      const gradedExam: GradedExam = { id: Date.now().toString(), exam, submissions: updated, averageScore: Math.round(avg), createdAt: new Date().toISOString() };
       const newHistory = [gradedExam, ...examHistory];
       setExamHistory(newHistory);
       saveToLocal(exam, updated, newHistory);
