@@ -13,6 +13,7 @@ const QuestionPrep: React.FC<QuestionPrepProps> = ({ onQuestionsGenerated }) => 
   const [difficulty, setDifficulty] = useState('Orta');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedQuestions, setGeneratedQuestions] = useState<Question[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const difficulties = [
     { id: 'Çok Basit', label: 'Çok Basit' },
@@ -30,12 +31,39 @@ const QuestionPrep: React.FC<QuestionPrepProps> = ({ onQuestionsGenerated }) => 
     try {
       const questions = await generateQuestions(grade, course, outcome, difficulty);
       setGeneratedQuestions(questions);
+      // Başlangıçta tümünü seç
+      setSelectedIds(questions.map((_, idx) => idx));
     } catch (err: any) {
       // Hata mesajını daha net göster
       alert(`Sınav Hazırlama Hatası:\n${err.message || "Bilinmeyen bir hata oluştu."}`);
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const toggleSelection = (idx: number) => {
+    if (selectedIds.includes(idx)) {
+      setSelectedIds(selectedIds.filter(id => id !== idx));
+    } else {
+      setSelectedIds([...selectedIds, idx]);
+    }
+  };
+
+  const selectAll = () => {
+    if (selectedIds.length === generatedQuestions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(generatedQuestions.map((_, idx) => idx));
+    }
+  };
+
+  const handleTransfer = () => {
+    const selected = generatedQuestions.filter((_, idx) => selectedIds.includes(idx));
+    if (selected.length === 0) {
+      alert("Lütfen en az bir soru seçiniz.");
+      return;
+    }
+    onQuestionsGenerated(selected);
   };
 
   const inputClasses = "w-full px-6 py-5 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-3xl focus:border-notera-turquoise outline-none transition-all text-slate-900 dark:text-white font-bold text-lg shadow-sm";
@@ -103,12 +131,39 @@ const QuestionPrep: React.FC<QuestionPrepProps> = ({ onQuestionsGenerated }) => 
 
       {generatedQuestions.length > 0 && (
         <div className="space-y-10 animate-fade-in">
-          <h3 className="text-3xl font-black text-notera-purple dark:text-white uppercase px-6 tracking-tight">Önerilen Soru Taslakları</h3>
+          <div className="flex justify-between items-end px-6">
+            <h3 className="text-3xl font-black text-notera-purple dark:text-white uppercase tracking-tight">Önerilen Soru Taslakları</h3>
+            <button 
+              onClick={selectAll}
+              className="text-xs font-black text-notera-turquoise uppercase tracking-widest hover:underline"
+            >
+              {selectedIds.length === generatedQuestions.length ? 'Tüm Seçimi Kaldır' : 'Tümünü Seç'}
+            </button>
+          </div>
           <div className="grid gap-8">
             {generatedQuestions.map((q, idx) => (
-              <div key={idx} className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+              <div 
+                key={idx} 
+                onClick={() => toggleSelection(idx)}
+                className={`cursor-pointer transition-all bg-white dark:bg-slate-900 p-10 rounded-[3rem] border-4 shadow-sm ${
+                  selectedIds.includes(idx) 
+                    ? 'border-notera-turquoise' 
+                    : 'border-slate-100 dark:border-slate-800 opacity-60 grayscale-[0.5]'
+                }`}
+              >
                  <div className="flex justify-between items-start mb-6">
-                    <span className="w-12 h-12 bg-notera-purple text-white rounded-2xl flex items-center justify-center font-black text-xl">{idx + 1}</span>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl transition-colors ${
+                        selectedIds.includes(idx) ? 'bg-notera-purple text-white' : 'bg-slate-200 text-slate-400'
+                      }`}>
+                        {idx + 1}
+                      </div>
+                      {selectedIds.includes(idx) && (
+                        <div className="w-8 h-8 bg-notera-turquoise text-white rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                      )}
+                    </div>
                     <span className="px-5 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-black text-notera-purple dark:text-notera-turquoise uppercase tracking-widest border border-slate-100 dark:border-slate-700">{q.maxScore} PUAN</span>
                  </div>
                  <p className="text-2xl font-bold text-slate-800 dark:text-white mb-8 leading-snug">{q.text}</p>
@@ -120,10 +175,10 @@ const QuestionPrep: React.FC<QuestionPrepProps> = ({ onQuestionsGenerated }) => 
             ))}
           </div>
           <button 
-            onClick={() => onQuestionsGenerated(generatedQuestions)}
+            onClick={handleTransfer}
             className="w-full py-10 bg-notera-purple text-white rounded-[3rem] font-black text-xl tracking-[0.3em] uppercase shadow-2xl hover:bg-notera-dark transition-all border-b-8 border-notera-dark/30 active:translate-y-2 active:border-b-0"
           >
-            Sınav Kağıdına Aktar
+            Seçilen Soruları ({selectedIds.length}) Aktar
           </button>
         </div>
       )}
