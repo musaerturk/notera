@@ -17,9 +17,10 @@ const ExamPaper: React.FC<ExamPaperProps> = ({ exam, settings, onBack, onStartGr
         <div className="flex items-center gap-4">
           <button 
             onClick={onBack}
-            className="w-12 h-12 flex items-center justify-center bg-slate-800 text-indigo-400 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all border border-indigo-900"
+            className="px-6 py-4 flex items-center gap-2 bg-slate-800 text-indigo-400 rounded-2xl hover:bg-indigo-600 hover:text-white transition-all border border-indigo-900 font-black text-xs uppercase tracking-widest"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+            DÜZENLE
           </button>
           <div>
             <h3 className="text-white font-black uppercase text-sm tracking-widest leading-none mb-1">Sınav Kağıdı Hazır</h3>
@@ -46,42 +47,49 @@ const ExamPaper: React.FC<ExamPaperProps> = ({ exam, settings, onBack, onStartGr
       </div>
 
       {/* Sınav Kağıdı Alanı (A4 Formatı) */}
-      <div className="bg-white text-black p-12 min-h-[1100px] shadow-2xl border border-slate-200 print:shadow-none print:border-none print:p-0 print:m-0" id="printable-exam">
-        {/* Okul Başlığı */}
-        <div className="border-[3px] border-black p-5 mb-10">
-          <div className="flex justify-between items-center text-center">
-            <div className="w-1/4 font-black text-[10px] md:text-xs uppercase leading-tight text-left">
-              {settings.schoolName || "T.C. MİLLİ EĞİTİM BAKANLIĞI"}
+      <div className="bg-white text-black p-12 min-h-[1100px] shadow-2xl border border-slate-200 print:shadow-none print:border-none print:p-0 print:m-0 flex flex-col" id="printable-exam">
+        {/* Okul Başlığı ve Sınav Bilgileri */}
+        <div className="mb-8 space-y-4">
+          <div className="text-center font-black text-xl uppercase tracking-widest">
+            {settings.schoolName || "OKUL ADI"}
+          </div>
+          
+          <div className="flex justify-between items-center font-bold text-sm uppercase">
+            <div className="w-1/3 text-left">
+              DERS ADI: {exam.courseName}
             </div>
-            <div className="flex-1 space-y-2">
-              <h1 className="text-xl md:text-2xl font-black uppercase tracking-tighter">
-                {exam.courseName} DERSİ {exam.examName}
-              </h1>
-              <p className="text-[10px] md:text-sm font-bold opacity-80">2024-2025 EĞİTİM ÖĞRETİM YILI</p>
+            <div className="w-1/3 text-center">
+              DÖNEM NO: {exam.termNo || "-"}
             </div>
-            <div className="w-1/4 font-black text-[10px] md:text-xs uppercase text-right">
-              {new Date(exam.date).toLocaleDateString('tr-TR')}
+            <div className="w-1/3 text-right">
+              SINAV NO: {exam.examNo || "-"}
             </div>
           </div>
         </div>
 
         {/* Öğrenci Bilgi Tablosu */}
         <div className="mb-12">
-          <table className="w-full border-collapse border-[2.5px] border-black text-[11px] md:text-sm font-bold">
+          <table className="w-full border-collapse border-[2px] border-black text-[11px] md:text-sm font-bold">
             <tbody>
-              <tr>
-                <td className="border-[2.5px] border-black p-4 w-1/3">ADI SOYADI:</td>
-                <td className="border-[2.5px] border-black p-4 w-1/6 text-center">SINIFI/ŞUBESİ:</td>
-                <td className="border-[2.5px] border-black p-4 w-1/6 text-center">{exam.classSection}</td>
-                <td className="border-[2.5px] border-black p-4 w-1/6 text-center">NO:</td>
-                <td className="border-[2.5px] border-black p-4 w-1/6 text-center">PUANI:</td>
+              <tr className="h-12">
+                <td className="border-[2px] border-black px-4 w-1/2">Adı Soyad:</td>
+                <td className="border-[2px] border-black px-4 w-1/6 text-center">Numara:</td>
+                <td className="border-[2px] border-black px-4 w-1/6 text-center">Sınıf Şube: {exam.classSection}</td>
+                <td className="border-[2px] border-black px-4 w-1/6 text-center">Puanı:</td>
               </tr>
             </tbody>
           </table>
         </div>
 
+        {/* Sınav Başlığı (Opsiyonel, eğer girildiyse) */}
+        {exam.examName && (
+          <div className="text-center mb-10 font-black text-lg uppercase underline underline-offset-4">
+            {exam.examName}
+          </div>
+        )}
+
         {/* Sorular */}
-        <div className="space-y-16">
+        <div className="space-y-16 flex-grow">
           {exam.questions.map((q, idx) => (
             <div key={q.id} className="relative page-break-inside-avoid">
               <div className="flex justify-between items-start mb-6">
@@ -117,13 +125,20 @@ const ExamPaper: React.FC<ExamPaperProps> = ({ exam, settings, onBack, onStartGr
         </div>
 
         {/* Alt Bilgi */}
-        <div className="mt-32 flex justify-between items-end border-t-[2.5px] border-black pt-10">
-          <div className="text-xs font-bold italic">
-            * Başarılar dilerim... Sınav süresi 40 dakikadır.
+        <div className="mt-20">
+          <div className="flex justify-between items-end border-t-[2px] border-black pt-8 mb-12">
+            <div className="text-xs font-bold italic">
+              * Başarılar dilerim... Sınav süresi 40 dakikadır.
+            </div>
+            <div className="text-center font-black">
+              <p className="text-sm uppercase underline underline-offset-8">{exam.teacherName || settings.teacherName || "Ders Öğretmeni"}</p>
+              <p className="text-[10px] mt-4 italic opacity-40">İmza / Mühür</p>
+            </div>
           </div>
-          <div className="text-center font-black">
-            <p className="text-sm uppercase underline underline-offset-8">{settings.teacherName || "Ders Öğretmeni"}</p>
-            <p className="text-[10px] mt-4 italic opacity-40">İmza / Mühür</p>
+
+          {/* Uygulama Sloganı (Silik) */}
+          <div className="text-center opacity-20 text-[8px] font-bold uppercase tracking-[0.5em] select-none">
+            NOTERA - Değerlendirmenin Akıllı Yolu
           </div>
         </div>
       </div>
