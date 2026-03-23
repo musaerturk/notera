@@ -62,16 +62,42 @@ const PricingView: React.FC<PricingViewProps> = ({ onSelectPlan }) => {
   ];
 
   return (
-    <div className="animate-fade-in pb-20 max-w-6xl mx-auto">
-      <div className="text-center space-y-4 mb-20">
+    <div className="animate-fade-in pb-20 max-w-6xl mx-auto px-4">
+      <div className="text-center space-y-4 mb-16">
         <h2 className="text-5xl font-black text-notera-purple dark:text-white uppercase tracking-tighter">İşini Kolaylaştıracak Paketi Seç</h2>
         <p className="text-xl font-medium text-slate-500 max-w-2xl mx-auto">
           Examora ile kağıt okuma yükünden kurtul, EduMetrik ile eğitim kalitesini verilerle artır.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4">
-        {plans.map((plan) => (
+      {/* Free Plan Highlight */}
+      <div className="mb-16 bg-emerald-50 dark:bg-emerald-950/20 border-4 border-emerald-500 rounded-[4rem] p-10 md:p-16 flex flex-col md:flex-row items-center justify-between gap-10 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+        <div className="relative z-10 space-y-6 text-center md:text-left">
+          <div className="inline-flex items-center gap-2 px-4 py-1 bg-emerald-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest">
+            ÜCRETSİZ BAŞLANGIÇ
+          </div>
+          <h3 className="text-4xl md:text-5xl font-black text-emerald-900 dark:text-emerald-400 uppercase tracking-tighter">
+            Hemen Ücretsiz <span className="italic">Devam Et</span>
+          </h3>
+          <p className="text-emerald-700 dark:text-emerald-600 font-bold text-lg max-w-xl">
+            NOTERA'nın gücünü keşfetmek için hiçbir ücret ödemeden başlayabilirsin. 25 kağıt okuma ve temel analizler tamamen ücretsiz.
+          </p>
+        </div>
+        <button 
+          onClick={() => onSelectPlan(plans[0])}
+          className="relative z-10 px-16 py-8 bg-emerald-500 text-white rounded-[2.5rem] font-black text-xl tracking-widest uppercase shadow-[0_20px_40px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
+        >
+          ÜCRETSİZ BAŞLA
+        </button>
+      </div>
+
+      <div className="text-center mb-12">
+        <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.4em]">VEYA PROFESYONEL PLANLARI İNCELE</h4>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        {plans.slice(1).map((plan) => (
           <div 
             key={plan.id} 
             className={`relative p-10 rounded-[3.5rem] border-4 transition-all hover:scale-[1.03] flex flex-col ${
