@@ -137,7 +137,7 @@ const App: React.FC = () => {
       case 'checkout': return <CheckoutView plan={selectedPlan!} onCancel={() => setCurrentView('pricing')} onSuccess={() => { setSettings({...settings, isPremium: true}); setCurrentView('home'); }} />;
       case 'home': return <HomePanel onNavigate={startNewExamFlow} onResume={(v) => setCurrentView(v)} isExamSet={!!exam} hasSubmissions={submissions.length > 0} />;
       case 'answer-key-upload': return <AnswerKeyUpload onParsed={handleAnswerKeyParsed} onCancel={() => setCurrentView('home')} />;
-      case 'setup': return <ExamSetup initialExam={exam} onSave={handleExamSaved} prefilledQuestions={prefilledQuestions} />;
+      case 'setup': return <ExamSetup initialExam={exam} onSave={handleExamSaved} prefilledQuestions={prefilledQuestions} settings={settings} />;
       case 'upload': return <UploadSection exam={exam!} onUpload={handleUploadComplete} settings={settings} />;
       case 'dashboard': return <GradingDashboard submissions={submissions} settings={settings} onSelect={(id) => { setSelectedSubmissionId(id); setCurrentView('detail'); }} onReset={() => { setSubmissions([]); saveToLocal(exam, []); }} onViewAnalytics={() => setCurrentView('analytics')} />;
       case 'detail':
