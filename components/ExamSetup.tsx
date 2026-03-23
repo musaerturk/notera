@@ -1,18 +1,22 @@
 
 import React, { useState, useEffect } from 'react';
-import { Exam, Question, GradingStep } from '../types';
+import { Exam, Question, GradingStep, UserSettings } from '../types';
 
 interface ExamSetupProps {
   initialExam: Exam | null;
   onSave: (exam: Exam) => void;
   prefilledQuestions?: Question[];
+  settings: UserSettings;
 }
 
-const ExamSetup: React.FC<ExamSetupProps> = ({ initialExam, onSave, prefilledQuestions }) => {
+const ExamSetup: React.FC<ExamSetupProps> = ({ initialExam, onSave, prefilledQuestions, settings }) => {
   const [examType, setExamType] = useState<'open-ended' | 'multiple-choice'>(initialExam?.type || 'open-ended');
   const [classSection, setClassSection] = useState(initialExam?.classSection || '');
   const [courseName, setCourseName] = useState(initialExam?.courseName || '');
   const [examName, setExamName] = useState(initialExam?.examName || '');
+  const [termNo, setTermNo] = useState(initialExam?.termNo || '');
+  const [examNo, setExamNo] = useState(initialExam?.examNo || '');
+  const [teacherName, setTeacherName] = useState(initialExam?.teacherName || settings.teacherName || '');
   
   const [questions, setQuestions] = useState<Question[]>(initialExam?.questions || [
     { id: '1', text: '', expectedAnswer: examType === 'multiple-choice' ? 'A' : '', keywords: [], maxScore: 10, gradingSteps: [] }
@@ -42,6 +46,14 @@ const ExamSetup: React.FC<ExamSetupProps> = ({ initialExam, onSave, prefilledQue
 
   const updateQuestion = (id: string, field: keyof Question, value: any) => {
     setQuestions(questions.map(q => q.id === id ? { ...q, [field]: value } : q));
+  };
+
+  const moveQuestion = (index: number, direction: 'up' | 'down') => {
+    const newQuestions = [...questions];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= questions.length) return;
+    [newQuestions[index], newQuestions[targetIndex]] = [newQuestions[targetIndex], newQuestions[index]];
+    setQuestions(newQuestions);
   };
 
   const addGradingStep = (qId: string) => {
@@ -93,6 +105,9 @@ const ExamSetup: React.FC<ExamSetupProps> = ({ initialExam, onSave, prefilledQue
       classSection,
       courseName,
       examName,
+      termNo,
+      examNo,
+      teacherName,
       date: new Date().toISOString(),
       questions
     });
@@ -143,7 +158,7 @@ const ExamSetup: React.FC<ExamSetupProps> = ({ initialExam, onSave, prefilledQue
           <div className="bg-slate-50 dark:bg-slate-800/50 p-6 border-b border-slate-100 dark:border-slate-800">
              <h3 className="text-[10px] font-black text-notera-purple dark:text-notera-turquoise uppercase tracking-[0.4em]">SINAV GENEL BİLGİLERİ</h3>
           </div>
-          <div className="p-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <label className={labelClasses}>Sınıf / Şube</label>
               <input type="text" value={classSection} onChange={(e) => setClassSection(e.target.value)} placeholder="Örn: 10-A" className={inputClasses} required />
@@ -153,8 +168,20 @@ const ExamSetup: React.FC<ExamSetupProps> = ({ initialExam, onSave, prefilledQue
               <input type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="Örn: Biyoloji" className={inputClasses} required />
             </div>
             <div>
-              <label className={labelClasses}>Sınav Başlığı</label>
-              <input type="text" value={examName} onChange={(e) => setExamName(e.target.value)} placeholder="Örn: 1. Yazılı" className={inputClasses} required />
+              <label className={labelClasses}>Dönem No</label>
+              <input type="text" value={termNo} onChange={(e) => setTermNo(e.target.value)} placeholder="Örn: 1. Dönem" className={inputClasses} />
+            </div>
+            <div>
+              <label className={labelClasses}>Sınav No</label>
+              <input type="text" value={examNo} onChange={(e) => setExamNo(e.target.value)} placeholder="Örn: 1. Yazılı" className={inputClasses} />
+            </div>
+            <div>
+              <label className={labelClasses}>Öğretmen Adı</label>
+              <input type="text" value={teacherName} onChange={(e) => setTeacherName(e.target.value)} placeholder="Örn: Ali Yılmaz" className={inputClasses} />
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClasses}>Sınav Başlığı (Kağıtta Görünecek)</label>
+              <input type="text" value={examName} onChange={(e) => setExamName(e.target.value)} placeholder="Örn: 1. Dönem 1. Biyoloji Yazılısı" className={inputClasses} required />
             </div>
           </div>
         </div>
@@ -167,9 +194,29 @@ const ExamSetup: React.FC<ExamSetupProps> = ({ initialExam, onSave, prefilledQue
                     <span className="w-14 h-14 bg-notera-purple text-white rounded-2xl flex items-center justify-center font-black text-2xl shadow-lg">{index + 1}</span>
                     <h4 className="text-notera-purple dark:text-white font-black text-xs uppercase tracking-[0.3em]">SORU VE PUAN TANIMI</h4>
                  </div>
-                 <button type="button" onClick={() => removeQuestion(q.id)} className="w-12 h-12 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-2xl transition-all">
-                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                 </button>
+                 <div className="flex items-center gap-2">
+                   <div className="flex flex-col gap-1 mr-4">
+                     <button 
+                       type="button" 
+                       onClick={() => moveQuestion(index, 'up')} 
+                       disabled={index === 0}
+                       className="p-2 text-slate-400 hover:text-notera-turquoise disabled:opacity-20 transition-all"
+                     >
+                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 15l7-7 7 7" /></svg>
+                     </button>
+                     <button 
+                       type="button" 
+                       onClick={() => moveQuestion(index, 'down')} 
+                       disabled={index === questions.length - 1}
+                       className="p-2 text-slate-400 hover:text-notera-turquoise disabled:opacity-20 transition-all"
+                     >
+                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                     </button>
+                   </div>
+                   <button type="button" onClick={() => removeQuestion(q.id)} className="w-12 h-12 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-2xl transition-all">
+                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                   </button>
+                 </div>
               </div>
 
               <div className="p-12 space-y-10">
