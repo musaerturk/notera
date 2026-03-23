@@ -20,17 +20,20 @@ const AdminPanel: React.FC = () => {
     { 
       id: '1', name: 'Eğitimci Başlangıç', price: 0, currency: '₺', 
       paperLimit: 25, questionGenLimit: 5, analyticsLevel: 'basic',
+      color: 'bg-slate-100 dark:bg-slate-800',
       features: ['25 Kağıt/Ay (Examora)', '5 AI Soru Üretimi', 'Temel Sınıf Analizi (EduMetrik)'] 
     },
     { 
       id: '2', name: 'Profesyonel Öğretmen', price: 249, currency: '₺', 
       paperLimit: 500, questionGenLimit: 100, analyticsLevel: 'advanced',
+      color: 'bg-notera-purple',
       features: ['500 Kağıt/Ay (Examora)', 'Sınırsız Soru Tasarımı', 'Gelişmiş Kazanım Analizi', 'Excel/PDF Aktarımı'],
       isPopular: true 
     },
     { 
       id: '3', name: 'Kurumsal / Okul', price: 2499, currency: '₺', 
       paperLimit: 10000, questionGenLimit: 5000, analyticsLevel: 'institutional',
+      color: 'bg-emerald-600',
       features: ['10.000 Kağıt/Ay', 'Okul Geneli Karşılaştırma', 'Yönetici Raporları', '7/24 Teknik Destek'] 
     },
   ]);
