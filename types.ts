@@ -19,6 +19,9 @@ export interface Exam {
   classSection: string;
   courseName: string;
   examName: string;
+  termNo?: string;
+  examNo?: string;
+  teacherName?: string;
   date: string;
   questions: Question[];
 }
